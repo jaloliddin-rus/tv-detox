@@ -36,6 +36,13 @@ is_off() { sh_tv pm list packages -d "$1" | grep -qx "package:$1"; }
 installed() { sh_tv pm list packages "$1" | grep -qx "package:$1"; }
 
 ME=com.ansub.tvhome/.MainActivity
+HOME_PKG=com.ansub.tvhome
+# If projectivy.sh set up Projectivy instead, check that it's the one in charge.
+if ! installed com.ansub.tvhome && installed com.spocky.projengmenu; then
+  HOME_PKG=com.spocky.projengmenu
+  ME=$(sh_tv cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME \
+    | grep "^ *$HOME_PKG/" | sed 's/^ *//' | head -1)
+fi
 home() { sh_tv cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1; }
 echo "Home screen"
 # The TV's own launchers first: while one is on, Home can't be fixed.
@@ -43,7 +50,7 @@ for p in $(sh_tv cat /data/local/tmp/tvhome-disabled.txt 2>/dev/null | sort -u);
   check "$p stays off" "is_off $p" "sh_tv pm disable-user --user 0 $p"
 done
 check "Home opens this home screen" '[ "$(home)" = "$ME" ]' \
-  'sh_tv cmd role add-role-holder --user 0 android.app.role.HOME com.ansub.tvhome; sh_tv cmd package set-home-activity "$ME"'
+  'sh_tv cmd role add-role-holder --user 0 android.app.role.HOME $HOME_PKG; sh_tv cmd package set-home-activity "$ME"'
 
 if [ -n "$LIST" ]; then
   echo "Your changes ($LIST)"

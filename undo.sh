@@ -1,5 +1,5 @@
 #!/bin/sh
-# Removes the home screen and turns your TV's own home screen back on.
+# Removes the home screen (this one or Projectivy) and turns your TV's own home screen back on.
 # Usage: sh undo.sh <TV_IP>
 set -e
 [ -n "$1" ] || { echo "Usage: sh undo.sh <TV_IP>" >&2; exit 1; }
@@ -16,5 +16,7 @@ for p in $(adb -s "$TV" shell cat /data/local/tmp/tvhome-disabled.txt 2>/dev/nul
 done
 adb -s "$TV" shell rm -f /data/local/tmp/tvhome-disabled.txt
 adb -s "$TV" uninstall com.ansub.tvhome >/dev/null 2>&1 || true
+# If projectivy.sh made Projectivy the home screen, hand Home back. Projectivy stays installed.
+adb -s "$TV" shell cmd role remove-role-holder --user 0 android.app.role.HOME com.spocky.projengmenu >/dev/null 2>&1 || true
 adb -s "$TV" shell input keyevent KEYCODE_HOME
 echo "Removed. Your TV is back to its own home screen."

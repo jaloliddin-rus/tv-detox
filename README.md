@@ -60,6 +60,8 @@ My TV is a <brand and model>.
 5. Install the home screen: download
    https://github.com/Ansub/tv-detox and run its
    install.sh with my TV and these apps: <your apps>.
+   (Want Projectivy Launcher instead? Run its
+   projectivy.sh with my TV in place of install.sh.)
 6. Turn off animations and the screensaver, and make the TV
    sleep after 5 minutes.
 7. Wait 30 seconds after the last change, then restart the
@@ -168,6 +170,14 @@ Yes. Leave out step 5 of the prompt ("Install the home screen"). Your TV looks t
 <br>
 
 You can. The cleanup is the part that makes the TV faster, and it works with any home screen. This one is here if you want something tiny and open source: one screen, no ads, no account, about 30 MB of RAM.
+
+To set it up from your laptop, run:
+
+```sh
+sh projectivy.sh <TV_IP>
+```
+
+It opens Projectivy in Google Play on your TV. Press **Install** with the remote, and the script makes it your home screen, offering to turn off your TV's own one like `install.sh` does. `check.sh` and `undo.sh` work with it too. If Home still opens your TV's home screen, open Projectivy and turn on **Settings > General > Override current launcher**.
 
 </details>
 
