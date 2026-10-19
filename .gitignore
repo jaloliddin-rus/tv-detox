@@ -3,3 +3,4 @@ key.jks
 *.apk
 .DS_Store
 .idea
+changes-*.txt

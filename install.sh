@@ -78,7 +78,7 @@ LAUNCHERS="com.google.android.tvlauncher com.google.android.apps.tv.launcherx co
 is_launcher() {
   case "$1" in
     com.ansub.tvhome|com.spocky.projengmenu|com.android.settings|com.android.tv.settings|com.android.systemui|com.android.provision) return 1 ;;
-    *setup*|*wraith*|*provision*|*systemui*|*tvcenter*|*.tv.framework*|*.tvinput*) return 1 ;;
+    *setup*|*wraith*|*provision*|*systemui*|*tvcenter*|*.tv.framework*|*.tvinput*|com.sony.dtv.*) return 1 ;;
   esac
   case " $(echo $LAUNCHERS) " in *" $1 "*) ;; *) return 1 ;; esac
   # If we can't read its flags, or it always runs, leave it on.
@@ -110,6 +110,7 @@ if [ "$(current_home)" != "$ME" ]; then
         for p in $others; do
           if sh_tv pm disable-user --user 0 "$p" | grep -q "new state: disabled"; then
             sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
+            echo "off $p" >> "changes-$(echo "$TV" | tr ':' '_').txt"
           else echo "Couldn't turn off $p." >&2; fi
         done
         # Android saves this a few seconds later. Restarting before then can undo it.

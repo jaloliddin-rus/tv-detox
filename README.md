@@ -211,7 +211,7 @@ sh check.sh <TV_IP> --fix            # and fix it
 sh check.sh <TV_IP> --fix my-tv.txt  # also check your own list of changes
 ```
 
-Your list has one change per line, like `off com.example.app`, `global window_animation_scale 0` or `device_config activity_manager max_cached_processes 4`. Ask Claude to write it from the changes it made.
+`install.sh` and `projectivy.sh` save what they turned off in `changes-<TV_IP>.txt`, which works as a list here. Your list has one change per line, like `off com.example.app`, `global window_animation_scale 0` or `device_config activity_manager max_cached_processes 4`. Ask Claude to write it from the changes it made.
 
 </details>
 
@@ -287,7 +287,7 @@ adb wait-for-device
 adb shell pm list packages -d
 ```
 
-That lists everything that's turned off. Turn each one back on with `adb shell pm enable <package>`, or all of them at once:
+That lists everything that's turned off, including apps your TV maker ships turned off. If you have a `changes-<TV_IP>.txt` file next to the scripts, `install.sh` or `projectivy.sh` wrote down there what they turned off, so start with those. Turn each one back on with `adb shell pm enable <package>`, or all of them at once:
 
 ```sh
 for p in $(adb shell pm list packages -d | tr -d '\r' | sed 's/package://'); do adb shell pm enable "$p"; done
