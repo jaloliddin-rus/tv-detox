@@ -4,6 +4,8 @@
 #
 #   sh projectivy.sh <TV_IP>
 #
+# It waits up to 5 minutes for you to press Install, so give it time if a tool runs it for you.
+# YES=1 answers yes to turning off the TV's own home screen.
 # Undo with undo.sh. Projectivy itself stays installed; uninstall it from the TV if you like.
 set -e
 cd "$(dirname "$0")"
@@ -38,8 +40,12 @@ current_home() { sh_tv cmd package resolve-activity --brief -a android.intent.ac
 
 # Google Play can't be driven over adb, so open the store page and wait for you to press Install.
 if ! installed; then
+  sh_tv pm list packages com.android.vending | grep -qx package:com.android.vending || {
+    echo "This TV has no Google Play (it may be in Basic TV mode or signed out). Sign in to Google, then run this again." >&2; exit 1; }
+  sh_tv input keyevent KEYCODE_WAKEUP
   echo "Opening Projectivy Launcher in Google Play on your TV. Press Install with the remote."
-  sh_tv am start -a android.intent.action.VIEW -d "market://details?id=$PKG" >/dev/null
+  out=$(sh_tv am start -a android.intent.action.VIEW -d "market://details?id=$PKG")
+  case "$out" in *Error*) echo "Couldn't open Google Play on your TV: $out" >&2; exit 1 ;; esac
   printf "Waiting for it to install"
   i=0
   until installed; do
@@ -54,16 +60,19 @@ fi
 ME=$(sh_tv cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null \
   | grep "^ *$PKG/" | sed 's/^ *//' | head -1)
 case "$ME" in
-  "") echo "Projectivy is installed but doesn't offer itself as a home screen on this TV."
-      echo "Open Projectivy, go to Settings > General and turn on \"Override current launcher\"."
-      exit 0 ;;
+  "") echo "Projectivy is installed but doesn't offer itself as a home screen on this TV." >&2
+      echo "Open Projectivy, go to Settings > General and turn on \"Override current launcher\"." >&2
+      exit 1 ;;
 esac
 
 # Make it the default home: the role (Android 10+) and the classic way.
-if [ "$(sh_tv getprop ro.build.version.sdk)" -ge 29 ]; then
+sdk=$(sh_tv getprop ro.build.version.sdk); case "$sdk" in ""|*[!0-9]*) sdk=0 ;; esac
+if [ "$sdk" -ge 29 ]; then
   sh_tv cmd role add-role-holder --user 0 android.app.role.HOME "$PKG" >/dev/null 2>&1 || true
 fi
 sh_tv cmd package set-home-activity "$ME" >/dev/null 2>&1 || true
+# Remember which home screen is meant to be in charge, for check.sh and undo.sh.
+sh_tv "echo $ME > /data/local/tmp/tvhome-home.txt"
 
 # Known TV home screens that are safe to turn off. Kept in step with install.sh.
 LAUNCHERS="com.google.android.tvlauncher com.google.android.apps.tv.launcherx com.google.android.leanbacklauncher
@@ -99,12 +108,14 @@ if [ "$(current_home)" != "$ME" ]; then
     answer=${YES:+y}
     if [ -z "$answer" ]; then
       printf "Turn it off so Home opens Projectivy? You can undo this with undo.sh. [y/N] "
-      read answer </dev/tty || answer=n
+      { read answer </dev/tty; } 2>/dev/null || answer=n
     fi
     case "$answer" in
       y|Y|yes)
         for p in $others; do
-          sh_tv pm disable-user --user 0 "$p" >/dev/null && sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
+          if sh_tv pm disable-user --user 0 "$p" | grep -q "new state: disabled"; then
+            sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
+          else echo "Couldn't turn off $p." >&2; fi
         done
         # Android saves this a few seconds later. Restarting before then can undo it.
         echo "Saving the change on the TV, this takes 15 seconds…"

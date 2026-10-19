@@ -58,10 +58,12 @@ My TV is a <brand and model>.
    else the TV needs to start. If you're not sure, leave
    it on.
 5. Install the home screen: download
-   https://github.com/Ansub/tv-detox and run its
+   https://github.com/jaloliddin-rus/tv-detox and run its
    install.sh with my TV and these apps: <your apps>.
-   (Want Projectivy Launcher instead? Run its
-   projectivy.sh with my TV in place of install.sh.)
+   (For Projectivy Launcher instead, run projectivy.sh
+   with just my TV. It waits up to 5 minutes for me to
+   press Install, so allow it 6 minutes, and pass YES=1
+   once I've agreed to turn off the TV's home screen.)
 6. Turn off animations and the screensaver, and make the TV
    sleep after 5 minutes.
 7. Wait 30 seconds after the last change, then restart the
@@ -94,7 +96,7 @@ Menus differ a bit by brand. If you're stuck, ask Claude or Codex: *"I have a \<
 <summary><b>Which TVs does it work on?</b></summary>
 <br>
 
-Android TV 9 (a real TV), 11 and 12, and Google TV 14. Every change is tested automatically on emulators.
+Android TV 9 (a real TV), 11 and 12, and Google TV 14. The home screen and `install.sh` are tested automatically on emulators. `projectivy.sh` isn't, because emulators have no Google Play.
 
 </details>
 
@@ -177,7 +179,7 @@ To set it up from your laptop, run:
 sh projectivy.sh <TV_IP>
 ```
 
-It opens Projectivy in Google Play on your TV. Press **Install** with the remote, and the script makes it your home screen, offering to turn off your TV's own one like `install.sh` does. `check.sh` and `undo.sh` work with it too. If Home still opens your TV's home screen, open Projectivy and turn on **Settings > General > Override current launcher**.
+It opens Projectivy in Google Play on your TV (you need to be signed in to Google). Press **Install** with the remote, and the script makes it your home screen, offering to turn off your TV's own one like `install.sh` does. `check.sh` and `undo.sh` work with it too. If Home still opens your TV's home screen, open Projectivy and turn on **Settings > General > Override current launcher**.
 
 </details>
 
@@ -223,6 +225,7 @@ Yes. You only need `adb`. On a Mac, run `brew install android-platform-tools`. O
 sh install.sh <TV_IP>                                               # picks your TV apps for you
 sh install.sh <TV_IP> "com.netflix.ninja,com.hulu.livingroomplus"   # or choose them
 sh install.sh <TV_IP> "" "bluetooth,sound,picture"    # add settings shortcuts
+sh projectivy.sh <TV_IP>                                            # or use Projectivy Launcher
 ```
 
 Most TVs keep opening their own home screen, so the script offers to turn that off. Nothing is uninstalled.
@@ -268,7 +271,7 @@ Press **Up** from your apps to reach them. A shortcut your TV has no screen for 
 sh undo.sh <TV_IP>
 ```
 
-This turns your TV's own home screen back on and removes this one. To undo the cleanup too, ask Claude or Codex to reverse everything on its list.
+This turns your TV's own home screen back on and removes this one. If you used `projectivy.sh`, Projectivy stays installed: if Home still opens it, turn off **Override current launcher** in its settings or uninstall it. To undo the cleanup too, ask Claude or Codex to reverse everything on its list.
 
 </details>
 

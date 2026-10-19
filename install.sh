@@ -61,10 +61,13 @@ sh_tv() { adb -s "$TV" shell "$@" | tr -d '\r'; }
 current_home() { sh_tv cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1; }
 
 # Make it the default home: the role (Android 10+) and the classic way.
-if [ "$(sh_tv getprop ro.build.version.sdk)" -ge 29 ]; then
+sdk=$(sh_tv getprop ro.build.version.sdk); case "$sdk" in ""|*[!0-9]*) sdk=0 ;; esac
+if [ "$sdk" -ge 29 ]; then
   sh_tv cmd role add-role-holder --user 0 android.app.role.HOME com.ansub.tvhome >/dev/null 2>&1 || true
 fi
 sh_tv cmd package set-home-activity "$ME" >/dev/null 2>&1 || true
+# Remember which home screen is meant to be in charge, for check.sh and undo.sh.
+sh_tv "echo $ME > /data/local/tmp/tvhome-home.txt"
 
 # Known TV home screens that are safe to turn off.
 LAUNCHERS="com.google.android.tvlauncher com.google.android.apps.tv.launcherx com.google.android.leanbacklauncher
@@ -74,7 +77,7 @@ LAUNCHERS="com.google.android.tvlauncher com.google.android.apps.tv.launcherx co
 # the TV needs them to start, so they, unknown apps and anything always running stay on.
 is_launcher() {
   case "$1" in
-    com.ansub.tvhome|com.android.settings|com.android.tv.settings|com.android.systemui|com.android.provision) return 1 ;;
+    com.ansub.tvhome|com.spocky.projengmenu|com.android.settings|com.android.tv.settings|com.android.systemui|com.android.provision) return 1 ;;
     *setup*|*wraith*|*provision*|*systemui*|*tvcenter*|*.tv.framework*|*.tvinput*) return 1 ;;
   esac
   case " $(echo $LAUNCHERS) " in *" $1 "*) ;; *) return 1 ;; esac
@@ -91,7 +94,7 @@ if [ "$(current_home)" != "$ME" ]; then
   for p in $(sh_tv cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null \
       | grep / | sed 's|/.*||; s/^ *//' | sort -u); do
     if is_launcher "$p"; then others="$others $p"; continue; fi
-    case "$p" in com.ansub.tvhome|com.android.settings|com.android.tv.settings) ;; *) echo "Leaving $p on: it may be needed for your TV to start." ;; esac
+    case "$p" in com.ansub.tvhome|com.spocky.projengmenu|com.android.settings|com.android.tv.settings) ;; *) echo "Leaving $p on: it may be needed for your TV to start." ;; esac
   done
   others=$(echo $others | tr ' ' '\n')
   if [ -n "$others" ]; then
@@ -100,12 +103,14 @@ if [ "$(current_home)" != "$ME" ]; then
     answer=${YES:+y}
     if [ -z "$answer" ]; then
       printf "Turn it off so Home opens your new home screen? You can undo this with undo.sh. [y/N] "
-      read answer </dev/tty || answer=n
+      { read answer </dev/tty; } 2>/dev/null || answer=n
     fi
     case "$answer" in
       y|Y|yes)
         for p in $others; do
-          sh_tv pm disable-user --user 0 "$p" >/dev/null && sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
+          if sh_tv pm disable-user --user 0 "$p" | grep -q "new state: disabled"; then
+            sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
+          else echo "Couldn't turn off $p." >&2; fi
         done
         # Android saves this a few seconds later. Restarting before then can undo it.
         echo "Saving the change on the TV, this takes 15 seconds…"

@@ -10,13 +10,35 @@ case "$1" in
 esac
 case "$TV" in *:*) adb connect "$TV" >/dev/null || true ;; esac
 
-# Turn back on whatever install.sh turned off, before removing this home screen.
-for p in $(adb -s "$TV" shell cat /data/local/tmp/tvhome-disabled.txt 2>/dev/null | tr -d '\r' | sort -u); do
-  adb -s "$TV" shell pm enable "$p" >/dev/null && echo "Turned $p back on"
+sh_tv() { adb -s "$TV" shell "$@" | tr -d '\r'; }
+
+# Turn back on whatever install.sh or projectivy.sh turned off, before removing this home screen.
+back=$(sh_tv cat /data/local/tmp/tvhome-disabled.txt 2>/dev/null | sort -u)
+for p in $back; do
+  sh_tv pm enable "$p" >/dev/null && echo "Turned $p back on"
 done
-adb -s "$TV" shell rm -f /data/local/tmp/tvhome-disabled.txt
+was=$(sh_tv cat /data/local/tmp/tvhome-home.txt 2>/dev/null | head -1)
+sh_tv rm -f /data/local/tmp/tvhome-disabled.txt /data/local/tmp/tvhome-home.txt
 adb -s "$TV" uninstall com.ansub.tvhome >/dev/null 2>&1 || true
-# If projectivy.sh made Projectivy the home screen, hand Home back. Projectivy stays installed.
-adb -s "$TV" shell cmd role remove-role-holder --user 0 android.app.role.HOME com.spocky.projengmenu >/dev/null 2>&1 || true
+
+# Projectivy stays installed, so hand Home to the TV's own home screen by name.
+# Android 9 has no roles, so set-home-activity is what changes it there. Known launchers are in
+# step with install.sh, for when nothing was turned off.
+for p in $back com.google.android.tvlauncher com.google.android.apps.tv.launcherx com.google.android.leanbacklauncher \
+    com.mitv.tvhome com.amazon.tv.launcher; do
+  own=$(sh_tv cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.HOME 2>/dev/null \
+    | grep "^ *$p/" | sed 's/^ *//' | head -1)
+  [ -n "$own" ] || continue
+  sh_tv cmd role add-role-holder --user 0 android.app.role.HOME "$p" >/dev/null 2>&1 || true
+  sh_tv cmd package set-home-activity "$own" >/dev/null 2>&1 || true
+  break
+done
+sh_tv cmd role remove-role-holder --user 0 android.app.role.HOME com.spocky.projengmenu >/dev/null 2>&1 || true
 adb -s "$TV" shell input keyevent KEYCODE_HOME
-echo "Removed. Your TV is back to its own home screen."
+
+case "$was" in
+  com.spocky.projengmenu/*)
+    echo "Done. Projectivy is still installed: if Home still opens it, turn off \"Override current launcher\""
+    echo "in Projectivy's settings, or uninstall Projectivy from the TV." ;;
+  *) echo "Removed. Your TV is back to its own home screen." ;;
+esac
