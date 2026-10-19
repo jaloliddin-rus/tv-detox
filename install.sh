@@ -110,7 +110,9 @@ if [ "$(current_home)" != "$ME" ]; then
         for p in $others; do
           if sh_tv pm disable-user --user 0 "$p" | grep -q "new state: disabled"; then
             sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
-            echo "off $p" >> "changes-$(echo "$TV" | tr ':' '_').txt"
+            # A copy on the laptop too, for undo.sh, in case the TV's is lost.
+            f=changes-${TV%%:*}.txt
+            { grep -qxF "off $p" "$f" 2>/dev/null || echo "off $p" >> "$f"; } 2>/dev/null || true
           else echo "Couldn't turn off $p." >&2; fi
         done
         # Android saves this a few seconds later. Restarting before then can undo it.
@@ -125,6 +127,7 @@ fi
 adb -s "$TV" shell input keyevent KEYCODE_HOME
 if [ "$(current_home)" = "$ME" ]; then
   echo "Done. Press Home on your remote to see it."
+  echo "Wait 30 seconds before you restart the TV, so Android saves the change."
 else
   echo "Installed, but your TV still opens its own home screen. If it asks which home screen to use, pick \"Home\" and choose Always."
 fi

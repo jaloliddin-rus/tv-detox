@@ -58,12 +58,16 @@ My TV is a <brand and model>.
    else the TV needs to start. If you're not sure, leave
    it on.
 5. Install the home screen: download
-   https://github.com/jaloliddin-rus/tv-detox and run its
-   install.sh with my TV and these apps: <your apps>.
-   (For Projectivy Launcher instead, run projectivy.sh
-   with just my TV. It waits up to 5 minutes for me to
-   press Install, so allow it 6 minutes, and pass YES=1
-   once I've agreed to turn off the TV's home screen.)
+   https://github.com/jaloliddin-rus/tv-detox. Ask me
+   which one I want: this one (run install.sh with my TV
+   and these apps: <your apps>) or Projectivy Launcher
+   (run projectivy.sh with just my TV; it waits up to
+   5 minutes for me to press Install, so allow it
+   7 minutes). Run the script once without YES=1. If it
+   wants to turn off my TV's own home screen, show me
+   its warning, and only if I agree run it again with
+   YES=1. If a script says it couldn't do something,
+   tell me instead of working around it.
 6. Turn off animations and the screensaver, and make the TV
    sleep after 5 minutes.
 7. Wait 30 seconds after the last change, then restart the
@@ -197,7 +201,7 @@ That's a TV setting, not this home screen. Ask it: *"My TV opens Live TV at star
 
 Some remote buttons are handled by the TV's own home screen or by apps the cleanup turned off. To see which app handles which button, ask Claude: *"Run `adb shell dumpsys window policy` and tell me which apps my remote's global keys go to."* If it's an app other than your TV's home screen, turn that app back on.
 
-**The YouTube button on some Google TVs** (seen on Xiaomi and Vu): it goes to Google TV's own home screen, which `install.sh` turns off, so the button does nothing. Turning that home screen back on brings the button back, but your TV may then open Google TV's home screen again instead of this one. Until there's a safe fix, open YouTube from its tile on the home screen.
+**The YouTube button on some Google TVs** (seen on Xiaomi and Vu): it goes to Google TV's own home screen, which `install.sh` or `projectivy.sh` turns off, so the button does nothing. Turning that home screen back on brings the button back, but your TV may then open Google TV's home screen again instead of this one. Until there's a safe fix, open YouTube from its tile on the home screen.
 
 </details>
 
@@ -271,7 +275,7 @@ Press **Up** from your apps to reach them. A shortcut your TV has no screen for 
 sh undo.sh <TV_IP>
 ```
 
-This turns your TV's own home screen back on and removes this one. If you used `projectivy.sh`, Projectivy stays installed: if Home still opens it, turn off **Override current launcher** in its settings or uninstall it. To undo the cleanup too, ask Claude or Codex to reverse everything on its list.
+This turns your TV's own home screen back on and removes this one. If you used `projectivy.sh`, it also turns off Projectivy's **Override current launcher**. Projectivy itself stays installed: uninstall it from the TV afterwards if you like. **Run `undo.sh` before you uninstall Projectivy**, or a TV whose own home screen is off is left with none. Wait 30 seconds before you restart the TV. To undo the cleanup too, ask Claude or Codex to reverse everything on its list.
 
 </details>
 
@@ -287,7 +291,7 @@ adb wait-for-device
 adb shell pm list packages -d
 ```
 
-That lists everything that's turned off, including apps your TV maker ships turned off. If you have a `changes-<TV_IP>.txt` file next to the scripts, `install.sh` or `projectivy.sh` wrote down there what they turned off, so start with those. Turn each one back on with `adb shell pm enable <package>`, or all of them at once:
+That lists everything that's turned off, including apps your TV maker ships turned off. If you have a `changes-<TV_IP>.txt` file next to the scripts, that's what `install.sh` or `projectivy.sh` turned off, so start with those. `undo.sh` turns those back on too. Turn each one back on with `adb shell pm enable <package>`, or all of them at once:
 
 ```sh
 for p in $(adb shell pm list packages -d | tr -d '\r' | sed 's/package://'); do adb shell pm enable "$p"; done

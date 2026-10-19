@@ -6,7 +6,8 @@
 #
 # It waits up to 5 minutes for you to press Install, so give it time if a tool runs it for you.
 # YES=1 answers yes to turning off the TV's own home screen.
-# Undo with undo.sh. Projectivy itself stays installed; uninstall it from the TV if you like.
+# Undo with undo.sh. Projectivy itself stays installed; uninstall it from the TV afterwards if you
+# like, but not before: with the TV's own home screen off, that leaves it with none.
 set -e
 cd "$(dirname "$0")"
 
@@ -66,7 +67,7 @@ case "$ME" in
 esac
 
 # Note the home screen the TV had before, once, so undo.sh can put it back exactly.
-sh_tv cat /data/local/tmp/tvhome-before.txt 2>/dev/null | grep -q / || sh_tv "echo $(current_home) > /data/local/tmp/tvhome-before.txt"
+sh_tv "cat /data/local/tmp/tvhome-before.txt 2>/dev/null" | grep -q / || sh_tv "echo $(current_home) > /data/local/tmp/tvhome-before.txt"
 
 # Make it the default home: the role (Android 10+) and the classic way.
 sdk=$(sh_tv getprop ro.build.version.sdk); case "$sdk" in ""|*[!0-9]*) sdk=0 ;; esac
@@ -108,9 +109,11 @@ if [ "$(current_home)" != "$ME" ]; then
   if [ -n "$others" ]; then
     echo "Your TV's own home screen keeps taking over:"
     echo "$others" | sed 's/^/  /'
-    echo "On Google TV this app also runs the Inputs and quick settings panels, and on some TVs the"
-    echo "YouTube button and casting. If you'd rather keep those, say N and turn on Projectivy's"
-    echo "Settings > General > \"Override current launcher\" instead."
+    echo "Careful: this app also runs things you may use. On Google TV that's the Inputs and quick"
+    echo "settings panels, profiles, ambient mode and Google Home controls, and on many TVs the YouTube"
+    echo "button and casting. If you'd rather keep those, say N and turn on Projectivy's"
+    echo "Settings > General > \"Override current launcher\" instead. (A recent Google TV update"
+    echo "can block that override, so Home may stay on your TV's own home screen. That's safe.)"
     answer=${YES:+y}
     if [ -z "$answer" ]; then
       printf "Turn it off so Home opens Projectivy? You can undo this with undo.sh. [y/N] "
@@ -121,7 +124,9 @@ if [ "$(current_home)" != "$ME" ]; then
         for p in $others; do
           if sh_tv pm disable-user --user 0 "$p" | grep -q "new state: disabled"; then
             sh_tv "echo $p >> /data/local/tmp/tvhome-disabled.txt"
-            echo "off $p" >> "changes-$(echo "$TV" | tr ':' '_').txt"
+            # A copy on the laptop too, for undo.sh, in case the TV's is lost.
+            f=changes-${TV%%:*}.txt
+            { grep -qxF "off $p" "$f" 2>/dev/null || echo "off $p" >> "$f"; } 2>/dev/null || true
           else echo "Couldn't turn off $p." >&2; fi
         done
         # Android saves this a few seconds later. Restarting before then can undo it.
@@ -137,6 +142,7 @@ adb -s "$TV" shell input keyevent KEYCODE_HOME
 if [ "$(current_home)" = "$ME" ]; then
   echo "Done. Press Home on your remote to see Projectivy."
   echo "Wait 30 seconds before you restart the TV, so Android saves the change."
+  echo "To go back, run undo.sh. Run it before you uninstall Projectivy, or the TV may have no home screen."
 else
   echo "Installed, but your TV still opens its own home screen. If it asks which home screen to use, pick Projectivy and choose Always."
   echo "Otherwise, in Projectivy turn on Settings > General > \"Override current launcher\"."
